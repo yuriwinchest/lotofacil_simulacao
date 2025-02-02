@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Lotofácil</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">Simulador de Loterias</h1>
+
+        <div class="loterias-container">
+            <button onclick="selecionarLoteria('lotofacil')" 
+                    class="loteria-btn lotofacil">
+                Lotofácil
+            </button>
+            <button onclick="selecionarLoteria('megasena')" 
+                    class="loteria-btn megasena">
+                Mega-Sena
+            </button>
+            <button onclick="selecionarLoteria('quina')" 
+                    class="loteria-btn quina">
+                Quina
+            </button>
+        </div>
+
+        <div id="resultado" class="resultado-card">
+            <div id="resultado-content">
+                <p class="text-center text-gray-500">Selecione uma loteria acima para ver os resultados</p>
+            </div>
+            
+            <div id="todos-jogos" class="concursos-lista hidden">
+                <h3 class="text-xl font-semibold mb-4">Últimos Concursos</h3>
+                <div id="lista-jogos">
+                    <!-- Os jogos serão inseridos aqui dinamicamente -->
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- Seção principal com geração de jogos e resultados -->
+        <div class="row">
+            <!-- Formulário para Gerar Jogos -->
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h2 class="card-title h4">Gerar Jogos</h2>
+                        <form id="form-jogos">
+                            <div class="mb-3">
+                                <label for="quantidade_jogos" class="form-label">Quantidade de Jogos:</label>
+                                <input type="number" class="form-control" id="quantidade_jogos" min="1" max="100" value="1" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="estrategia" class="form-label">Estratégia:</label>
+                                <select class="form-select" id="estrategia">
+                                    <option value="frequentes">Apenas Números Frequentes</option>
+                                    <option value="misturados">Misturar Frequentes e Raros</option>
+                                    <option value="aleatorio">Totalmente Aleatório</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Gerar Jogos</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resultados dos Jogos Gerados -->
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h2 class="card-title h4">Jogos Gerados</h2>
+                        <div id="resultados" class="jogos-grid">
+                            <!-- Os jogos serão inseridos aqui dinamicamente -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mensagem de Erro -->
+        {% if erro %}
+            <div class="alert alert-danger mt-3" role="alert">
+                <strong>Erro!</strong> {{ erro }}
+            </div>
+        {% endif %}
+
+        <!-- Cards de Estatísticas -->
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm">
+                    <div class="card-body">
+                        <h3 class="estatistica-valor" id="mediaAcertos">--</h3>
+                        <p class="estatistica-label">Média de Acertos</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm">
+                    <div class="card-body">
+                        <h3 class="estatistica-valor" id="melhorResultado">--</h3>
+                        <p class="estatistica-label">Melhor Resultado</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center shadow-sm">
+                    <div class="card-body">
+                        <h3 class="estatistica-valor" id="probabilidadeAcertos">--</h3>
+                        <p class="estatistica-label">Probabilidade de 11+</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção de Gráficos -->
+        <section class="graficos-section mt-5">
+            <h2 class="text-center mb-4">Análise Estatística</h2>
+            <div class="row">
+                <!-- Gráfico de Frequência -->
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h3 class="card-title h5">Frequência dos Números</h3>
+                            <img src="{{ url_for('static', filename='frequencia.png') }}" alt="Gráfico de Frequência" class="img-fluid">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gráfico de Distribuição de Acertos -->
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h3 class="card-title h5">Distribuição de Acertos</h3>
+                            <canvas id="graficoAcertos"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Comparação -->
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h3 class="card-title h5">Comparação com Últimos Sorteios</h3>
+                            <canvas id="graficoComparacao"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Probabilidade -->
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h3 class="card-title h5">Probabilidade por Região</h3>
+                            <canvas id="graficoProbabilidade"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Link para o arquivo JavaScript -->
+    <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+
+    <!-- Adicione este script no final do body -->
+    <script>
+    let loteriaAtual = '';
+    const cores = {
+        'lotofacil': 'bg-blue-500',
+        'megasena': 'bg-green-500',
+        'quina': 'bg-purple-500'
+    };
+
+    function selecionarLoteria(loteria) {
+        loteriaAtual = loteria;
+        
+        // Atualiza visual dos botões
+        document.querySelectorAll('.loteria-btn').forEach(btn => {
+            btn.classList.remove('ring-2', 'ring-offset-2');
+        });
+        event.target.classList.add('ring-2', 'ring-offset-2');
+        
+        // Carrega resultados
+        carregarResultados(loteria);
+        
+        // Mostra lista de concursos
+        document.getElementById('todos-jogos').classList.remove('hidden');
+    }
+
+    function carregarResultados(loteria) {
+        document.getElementById('resultado-content').innerHTML = '<p class="text-gray-500">Carregando...</p>';
+        
+        fetch(`/${loteria}/ultimos-resultados`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    exibirResultado(data.resultado);
+                    carregarListaConcursos(data.resultados);
+                } else {
+                    mostrarErro('Erro ao carregar os resultados.');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                mostrarErro('Erro ao carregar os resultados. Tente novamente mais tarde.');
+            });
+    }
+
+    function exibirResultado(resultado) {
+        const corClasse = `${loteriaAtual}-color`;
+        
+        document.getElementById('resultado-content').innerHTML = `
+            <div class="resultado-content">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xl font-semibold">Concurso ${resultado.concurso}</h3>
+                    <span class="text-gray-600">${resultado.data}</span>
+                </div>
+                <div class="numeros-container">
+                    ${resultado.numeros.map(num => 
+                        `<span class="numero-bola ${corClasse}">${num}</span>`
+                    ).join('')}
+                </div>
+                <div class="premio-info">
+                    <p class="font-medium">Prêmio: 
+                        <span class="text-green-600">R$ ${resultado.premio.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                    </p>
+                    <p>Ganhadores: ${resultado.ganhadores}</p>
+                </div>
+            </div>
+        `;
+    }
+
+    function carregarListaConcursos(resultados) {
+        const listaJogos = document.getElementById('lista-jogos');
+        listaJogos.innerHTML = resultados.map(resultado => `
+            <div class="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all" 
+                 onclick="exibirResultado(${JSON.stringify(resultado)})">
+                <div class="flex justify-between items-center">
+                    <span class="font-medium">Concurso ${resultado.concurso}</span>
+                    <span class="text-gray-600">${resultado.data}</span>
+                </div>
+                <div class="text-sm text-gray-600 mt-1">
+                    Prêmio: R$ ${resultado.premio.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function mostrarErro(mensagem) {
+        document.getElementById('resultado-content').innerHTML = `
+            <p class="text-red-500">${mensagem}</p>
+        `;
+    }
+    </script>
+</body>
+</html>
