@@ -1,3 +1,7 @@
 git init 
 git add .
 git commit -m "Primeiro commit: Sistema de Loterias com Flask" 
+gh repo create lotofacil_simulacao --public 
+git remote remove origin
+git remote add origin https://github.com/yuriwinchest/lotofacil_simulacao.git 
+git remote set-url origin https://github.com/yuriwinchest/lotofacil_simulacao.git 
